@@ -9,6 +9,10 @@ module Fib
       @permissions_map = {}
     end
 
+    def ==(collection)
+      permissions.sort == collection.sort
+    end
+
     # find permission from collection
     def get(model, action)
       return nil unless @permissions_map.key? model
@@ -87,7 +91,8 @@ module Fib
       end
     end
 
-    def permission_params(user)
+    def permission_params(user, loaded = [])
+      raise Exception 'Circular Dependencies' if loaded.include?(self)
       permissions.map do |p|
         default_params =
           p.action_package.map do |a|
@@ -95,11 +100,12 @@ module Fib
             attrs[:cond] = proc { |target| a.condition[target, user] } if a.condition.present?
             attrs
           end
+        loaded << p
         bind_params =
           if p.bind.empty?
             []
           else
-            p.bind.permission_params(user)
+            p.bind.permission_params(user, loaded)
          end
         default_params + bind_params
       end.flatten.uniq
