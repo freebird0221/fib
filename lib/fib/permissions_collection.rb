@@ -51,11 +51,23 @@ module Fib
       end
     end
 
-    def bind(klass_1, action_1, klass_2, action_2)
-      raise PermissionIsNotFind unless check_model_action(klass_1, action_1)
-      raise PermissionIsNotFind unless check_model_action(klass_2, action_2)
+    # def bind(klass_1, action_1, klass_2, action_2)
+    #   raise PermissionIsNotFind unless check_model_action(klass_1, action_1)
+    #   raise PermissionIsNotFind unless check_model_action(klass_2, action_2)
+    #
+    #   @permissions_map[klass_1.to_s][action_1.to_s].bind << @permissions_map[klass_2.to_s][action_2.to_s]
+    # end
 
-      @permissions_map[klass_1.to_s][action_1.to_s].bind << @permissions_map[klass_2.to_s][action_2.to_s]
+    def bind(*arr)
+      permission = nil
+      Hash[*arr].map do |(klass, action)|
+        raise PermissionIsNotFind, "#{klass}, #{action} not find" check_model_action(klass, action)
+        if permission
+          permission = @permissions_map[klass.to_s][action.to_s]
+        else
+          permission.bind << @permissions_map[klass.to_s][action.to_s]
+        end
+      end
     end
 
     def bind_self(klass, *action_arr)
@@ -113,9 +125,9 @@ module Fib
 
     def check_model_action(model, action)
       hash = @permissions_map[model.to_s]
-      return false unless hash.is_a? Hash
+      raise "#{model} #{action} not find" unless hash.is_a? Hash
       record = hash[action.to_s]
-      return false unless record.is_a? Fib::Permission
+      raise "#{model} #{action} not find" unless record.is_a? Fib::Permission
 
       true
     end
